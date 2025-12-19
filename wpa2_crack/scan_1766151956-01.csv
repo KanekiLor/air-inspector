@@ -1,0 +1,10 @@
+
+BSSID, First time seen, Last time seen, channel, Speed, Privacy, Cipher, Authentication, Power, # beacons, # IV, LAN IP, ID-length, ESSID, Key
+F4:91:1E:C3:78:EF, 2025-12-19 08:45:56, 2025-12-19 08:46:03,  1,  65, WPA2, CCMP, PSK, -69,        8,        0,   0.  0.  0.  0,   8, 1ec378ef, 
+38:2C:4A:66:2A:70, 2025-12-19 08:45:56, 2025-12-19 08:46:03,  1, 195, WPA2, CCMP, PSK, -61,       11,        7,   0.  0.  0.  0,   9, Cristache, 
+38:2C:4A:66:2A:71, 2025-12-19 08:45:56, 2025-12-19 08:46:03,  1, 195, WPA2, CCMP, PSK, -62,       15,        0,   0.  0.  0.  0,  15, Cristache_Guest, 
+
+Station MAC, First time seen, Last time seen, Power, # packets, BSSID, Probed ESSIDs
+E8:6D:E9:BF:AC:BE, 2025-12-19 08:45:56, 2025-12-19 08:45:56,  -1,        1, 38:2C:4A:66:2A:70,
+EA:5B:AB:F5:84:08, 2025-12-19 08:45:57, 2025-12-19 08:46:02, -15,       40, 38:2C:4A:66:2A:70,Cristache
+

