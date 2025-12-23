@@ -1,7 +1,7 @@
 import argparse
 import json
 import sys
-
+import time
 import net_connect
 import mitm_ettercap 
 
@@ -14,6 +14,13 @@ def main():
     parser.add_argument("--outprefix", default="nmap_ping", help="Prefix for saved nmap output files (if used)")
     args = parser.parse_args()
 
+    dots = ['.  ', '.. ', '...']
+    for _ in range(10):
+        for l in dots:
+            sys.stdout.write("\r Scanning for victims " + l)
+            sys.stdout.flush()
+            time.sleep(0.15)
+            
     try:
         ssid = None if args.no_connect else args.ssid
         result = net_connect.connect_and_scan(ssid, args.password, args.outprefix)
@@ -22,12 +29,12 @@ def main():
         sys.exit(2)
  
     summary = {
-        "interface": result['iface'],
-        "ip": result['src_ip'],
-        "network": result['cidr'],
-        "hosts_up_count": len([h for h in result['scan_parsed'] if h['status'].lower()=='up'])
+        "Interface used": result['iface'],
+        "Your IP": result['src_ip'],
+        "Network": result['cidr'],
+        "Hosts_up_count": len([h for h in result['scan_parsed'] if h['status'].lower()=='up'])
     }
-    print("Scan summary:")
+    print("\nScan summary:")
     print(json.dumps(summary, indent=2))
  
     fname = f"scan_result.json"

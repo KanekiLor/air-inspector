@@ -37,7 +37,7 @@ def set_interfaces():
         print("This operation requires root privileges.")
         return None
 
-    print("Running with root privileges.")
+    print("Running with root privileges.\n")
     interfaces = get_interfaces()
     if not interfaces:
         print("No wireless interfaces found.")
@@ -46,7 +46,7 @@ def set_interfaces():
     for i, iface in enumerate(interfaces, start=1):
         print(f"{i}. {iface}")
     try:
-        number = int(input("Enter interface number: "))
+        number = int(input("Enter interface number for the interface you want in monitor mode: "))
         if 1 <= number <= len(interfaces):
             chosen = interfaces[number - 1]
             set_monitor_mode(chosen)

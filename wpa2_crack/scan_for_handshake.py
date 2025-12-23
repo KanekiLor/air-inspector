@@ -78,6 +78,8 @@ def start_airodump_and_watch(iface: str, channel: int, bssid_ap: str, out_prefix
 
             if "WPA handshake" in clean or "WPA Handshake" in clean or "WPA handshake:" in clean:
                 logger.info("Detected handshake in stdout: %s", clean)
+                os.system("clear")
+                logger.info("\nStarting crack for password.")
                 return proc, cap_path
 
         return proc, cap_path
