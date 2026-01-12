@@ -1,4 +1,3 @@
-# === FILE: net_connect.py ===
 import subprocess
 import re
 import shlex
@@ -78,7 +77,6 @@ def get_iface_and_src_via_ip_route() -> Tuple[str, str]:
  
  
 def get_prefix_for_iface(iface: str) -> int:
-    """Return IPv4 prefix length for the interface (e.g. 24), raising NetConnectError if not found."""
     out = run_cmd(f"ip -4 addr show dev {shlex.quote(iface)}")
     # look for 'inet 192.168.1.10/24'
     m = re.search(r"inet\s+(\d+\.\d+\.\d+\.\d+)/(\d+)", out)
@@ -88,7 +86,6 @@ def get_prefix_for_iface(iface: str) -> int:
  
  
 def build_network_cidr(src_ip: str, prefix: int) -> str:
-    """Return network in CIDR notation (e.g. '192.168.1.0/24') from src IP and prefix."""
     intf = ipaddress.IPv4Interface(f"{src_ip}/{prefix}")
     network = intf.network
     return str(network)

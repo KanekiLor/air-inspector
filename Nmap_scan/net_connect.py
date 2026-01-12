@@ -2,7 +2,6 @@ import subprocess
 import re
 import shlex
 import ipaddress
-import datetime
 from typing import Tuple, Optional
  
  

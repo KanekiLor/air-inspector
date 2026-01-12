@@ -39,16 +39,14 @@ def print_banner():
             sys.stdout.flush()
             time.sleep(0.15)
 
-    print("\n✔ AirInspector ready.\n")
+    print("\n AirInspector ready.\n")
 
 def check_root():
-    # Checks whether the script is executed with root privileges.
     if os.geteuid() != 0:
         print("[-] This script must be run with root privileges. Use sudo.")
         sys.exit(1)
 
 def check_tools():
-    # Checks required tools
     tools = [
         'ip',
         'iw',

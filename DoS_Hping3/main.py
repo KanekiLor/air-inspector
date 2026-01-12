@@ -2,7 +2,6 @@ import os
 import subprocess
 import netifaces
 import threading
-import signal
 import time
 import re
 
@@ -112,6 +111,7 @@ def run_hping3(option, gateway_ip=None, iface="wlan0"):
     elif option == "6":
         cmd = ["python3", str(Path(__file__).parent / "dhcp_exhaust.py"), "-i", iface]
     elif option == "7":
+        os.system("clear")
         cmd = ["python3", str(Path(__file__).parent / "deauth.py"), "-i", iface]
     elif option == "8":
         print("Exiting...")
@@ -189,22 +189,24 @@ def run_hping3(option, gateway_ip=None, iface="wlan0"):
             
             stop_event.wait(timeout=1)
     
-    input_thread = threading.Thread(target=wait_for_enter, daemon=True)
-    input_thread.start()
-    
-    if option != "6" and option != "7":
+    if  option != "7" and option != "6":
+        input_thread = threading.Thread(target=wait_for_enter, daemon=True)
+        input_thread.start()
+        
         monitor_thread = threading.Thread(target=monitor_gateway, daemon=True)
         monitor_thread.start()
-    
-    while process.poll() is None and not stop_event.is_set():
-        stop_event.wait(timeout=0.1)
-    
-    if process.poll() is None:
-        process.terminate()
-        try:
-            process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        
+        while process.poll() is None and not stop_event.is_set():
+            stop_event.wait(timeout=0.1)
+        
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+    else:
+        process.wait()
  
 
 def main():
@@ -212,6 +214,8 @@ def main():
     
     default_iface = choose_interface()
     print(f"\n[*] Using interface: {default_iface}")
+    
+    os.system("clear")
     
     gateway_ip = get_gateway_ip()
 

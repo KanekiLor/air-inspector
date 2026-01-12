@@ -2,7 +2,6 @@ from scapy.all import *
 from multiprocessing import Process, Manager
 import time
 import os
-import math
 
 
 def estimate_distance(rssi, frequency_mhz=2437, tx_power=-20, path_loss_exponent=3.0):
@@ -23,7 +22,6 @@ def estimate_distance(rssi, frequency_mhz=2437, tx_power=-20, path_loss_exponent
 
 
 def get_frequency_from_channel(channel):
-    """Convert Wi-Fi channel number to frequency in MHz."""
     if channel is None:
         return 2437  
     

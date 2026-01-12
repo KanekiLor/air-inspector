@@ -1,5 +1,4 @@
 from scapy.all import ARP, Ether, sendp
-import logging
 from typing import Tuple, Optional
 from utils import logger, run_cmd
 import os

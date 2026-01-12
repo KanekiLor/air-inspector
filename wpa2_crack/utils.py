@@ -3,7 +3,6 @@ import subprocess
 import logging
 from typing import Tuple, List
 import os
-import sys
 
 # ---------- Logger ----------
 logging.basicConfig(

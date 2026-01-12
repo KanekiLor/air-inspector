@@ -2,8 +2,23 @@ import argparse
 import json
 import sys
 import time
+import threading
 import net_connect
 import mitm_ettercap 
+
+
+_stop_dots = threading.Event()
+
+
+def show_progress_dots(message: str = "[*] Scanning for victims"):
+    while not _stop_dots.is_set():
+        for i in range(3):
+            if _stop_dots.is_set():
+                break
+            dots = "." * (i + 1)
+            sys.stdout.write(f"\r {message}{dots.ljust(4)}")
+            sys.stdout.flush()
+            time.sleep(0.3)
 
 
 def main():
@@ -14,12 +29,9 @@ def main():
     parser.add_argument("--outprefix", default="nmap_ping", help="Prefix for saved nmap output files (if used)")
     args = parser.parse_args()
 
-    dots = ['.  ', '.. ', '...']
-    for _ in range(10):
-        for l in dots:
-            sys.stdout.write("\r Scanning for victims " + l)
-            sys.stdout.flush()
-            time.sleep(0.15)
+    _stop_dots.clear()
+    dots_thread = threading.Thread(target=show_progress_dots, daemon=True)
+    dots_thread.start()
             
     try:
         ssid = None if args.no_connect else args.ssid
@@ -27,6 +39,10 @@ def main():
     except net_connect.NetConnectError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(2)
+    finally:
+        _stop_dots.set()
+        dots_thread.join(timeout=1)
+        print("\r [*] Scan complete!      ")
  
     summary = {
         "Interface used": result['iface'],
