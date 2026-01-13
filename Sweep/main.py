@@ -20,6 +20,7 @@ def main():
         for l in dots:
             sys.stdout.write("\r Scanning for hosts " + l)
             sys.stdout.flush()
+            time.sleep(0.15)
     try:
         ssid = None if args.no_connect else args.ssid
         result = net_connect.connect_and_scan(ssid, args.password, args.outprefix)
