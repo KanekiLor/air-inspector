@@ -164,14 +164,14 @@ def run_hping3(option, gateway_ip=None, iface="wlan0"):
                         
                         if latency > 2000: 
                             stats['slow'] += 1
-                            status = " Dead"
-                            color = "\033[93m"  
+                            status = " Attack working"
+                            color = "\033[92m"  
                         elif latency > 500:
-                            status = "  Slow"
+                            status = "  Attack slowing it"
                             color = "\033[93m"  
                         else:
-                            status = " OK"
-                            color = "\033[92m"  #
+                            status = " Attack failed"
+                            color = "\033[91m"  #
                         
                         avg_latency = sum(stats['latencies']) / len(stats['latencies'])
                         print(f"{color}[MONITOR] Ping: {latency:.1f}ms | Status: {status} | "

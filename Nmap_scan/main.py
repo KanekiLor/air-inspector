@@ -4,7 +4,7 @@ import sys
 import time
 import threading
 import net_connect
-import mitm_ettercap 
+import mitm_bettercap 
 
 
 _stop_dots = threading.Event()
@@ -60,5 +60,5 @@ def main():
  
 if __name__ == '__main__':
     main()
-    mitm_ettercap.main()  
+    mitm_bettercap.main()  
     
