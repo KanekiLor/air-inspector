@@ -12,7 +12,7 @@ import sys
 from monitor_mode import set_interfaces
 from scanner import scan_once
 from scan_parser import parse_scan, choose_ap_by_name
-from scan_for_handshake import check_handshake, deauthenthicate, start_airodump_and_watch
+from scan_for_handshake import check_handshake, deauthenticate, start_airodump_and_watch
 from crack import crack_cap
 
 
@@ -97,7 +97,7 @@ def run(interactive: bool = True, iface: str | None=None, duration: int=8, out_p
 		ok = False
 		out_prefix = Path("handshake").with_suffix('')  
 		cap_path = None
-
+		proc = None
 		result = {"proc": None, "cap_path": None, "handshake_detected": False}
 		stop_event = threading.Event() 
 
@@ -139,7 +139,7 @@ def run(interactive: bool = True, iface: str | None=None, duration: int=8, out_p
 					for client in clients:
 						if stop_event.is_set():
 							break
-						futures.append(exe.submit(deauthenthicate, focus['bssid'], client, iface_to_use, 50))
+						futures.append(exe.submit(deauthenticate, focus['bssid'], client, iface_to_use, 50))
 
 					if not futures:
 						break
