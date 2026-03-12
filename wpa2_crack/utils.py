@@ -36,6 +36,6 @@ def is_root() -> bool:
     try:
         return os.geteuid() == 0
     except AttributeError:
-        pass
+        return False
 
 

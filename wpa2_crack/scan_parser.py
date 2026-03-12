@@ -43,7 +43,7 @@ def parse_scan(csv_path: Path) -> Dict[str, List[Dict]]:
             "channel": _try_int(data.get("channel") or data.get("CH") or data.get("Channel")),
             "power": _try_int(data.get("Power") or data.get("PWR")),
             "beacons": _try_int(data.get("# beacons") or data.get("Beacons")),
-            "essid": data.get("ESSID") or data.get("ESSID") or data.get("ESSID ") or data.get("ESSID"),
+            "essid": data.get("ESSID") or data.get("ESSID "),
             "privacy": data.get("Privacy"),
             "raw": data 
         }
@@ -87,24 +87,6 @@ def choose_ap_by_name(aps: List[Dict], essid: str) -> Optional[Dict]:
         if ap.get("essid") and essid.lower() in ap.get("essid").lower():
             return ap
     return None
- 
- 
-def choose_strongest_ap(aps: List[Dict]) -> Optional[Dict]:
-
-    if not aps:
-        return None
-
-    def _power_value(ap: Dict) -> int:
-        p = ap.get("power")
-        if isinstance(p, (int, float)):
-            return int(p)
-        try:
-            return int(p)
-        except Exception:
-            return -9999
-
-    return max(aps, key=_power_value)
- 
  
 
 
