@@ -118,6 +118,8 @@ def print_menu():
     print("6. Triangulate AP Location")
     print("\n WPA2-3 Transition Attacks:")
     print("7. DragonShift Attack")
+    print("\n WPA3 Attacks:")
+    print("8. WPA3 DoS Attack")
     print("\n0. Exit")
     print("=" * 50)
 
@@ -171,6 +173,11 @@ def main():
             # DragonShift Attack (WPA2-3 Transition)
             os.system("clear")
             script_path = os.path.join(base_dir, "Wpa3_DragonBLood", "dragonshift.py")
+            subprocess.run(["python3", script_path])
+        elif choice == "8":
+            # WPA3 DoS Attack - using sae commit flood
+            os.system("clear")
+            script_path = os.path.join(base_dir, "Wpa3_DOS", "dos.py")
             subprocess.run(["python3", script_path])
         else:
             print("Invalid choice. Please select a valid option.")
