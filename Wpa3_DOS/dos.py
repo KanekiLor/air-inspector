@@ -1,4 +1,4 @@
-import sys, os, time, shutil, subprocess, re, random, signal, csv, tempfile
+import sys, os, time, subprocess, re, random, signal, csv, tempfile
 from threading import Thread, Event, Lock
 
 from scapy.all import (
