@@ -97,7 +97,6 @@ def run(interactive: bool = True, iface: str | None=None, duration: int=8, out_p
 		ok = False
 		out_prefix = Path("handshake").with_suffix('')  
 		cap_path = None
-		proc = None
 
 		result = {"proc": None, "cap_path": None, "handshake_detected": False}
 		stop_event = threading.Event() 
@@ -122,7 +121,7 @@ def run(interactive: bool = True, iface: str | None=None, duration: int=8, out_p
 		print("Waiting for airodump-ng to start capturing...")
 		time.sleep(5)
 
-		timeout = 1200
+		timeout =  600
 		start_time = time.time()
 		try:
 			clients = find_clients(iface_to_use, focus['bssid'], stations)

