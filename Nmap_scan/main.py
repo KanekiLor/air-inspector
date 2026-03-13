@@ -29,7 +29,6 @@ def main():
     parser.add_argument("--outprefix", default="nmap_ping", help="Prefix for saved nmap output files (if used)")
     args = parser.parse_args()
 
-    _stop_dots.clear()
     dots_thread = threading.Thread(target=show_progress_dots, daemon=True)
     dots_thread.start()
             
@@ -53,7 +52,7 @@ def main():
     print("\nScan summary:")
     print(json.dumps(summary, indent=2))
  
-    fname = f"scan_result.json"
+    fname = "scan_result.json"
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2)
  
