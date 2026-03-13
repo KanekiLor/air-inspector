@@ -277,7 +277,7 @@ def kill_php_xterm():
                     except (ProcessLookupError, ValueError):
                         pass
     except Exception as e:
-        print(f"[!] Error killing PHP xterm: {e}")
+        print(f"[!] Error killing PHP xterm: {e} ")
 
 
 def main():
