@@ -129,19 +129,13 @@ def connect_and_scan(ssid: Optional[str], password: Optional[str], output_prefix
  
     scan_out = scan_with_nmap(cidr, output_prefix)
  
-    if isinstance(scan_out, str) and scan_out.endswith('.txt') and output_prefix:
-        with open(scan_out, 'r', encoding='utf-8') as f:
-            scan_text = f.read()
-    else:
-        scan_text = scan_out
- 
-    parsed = parse_nmap_grepable(scan_text)
+    parsed = parse_nmap_grepable(scan_out)
  
     return {
         "iface": iface,
         "src_ip": src,
         "cidr": cidr,
-        "scan_raw": scan_text,
+        "scan_raw": scan_out,
         "scan_parsed": parsed,
     }
  
