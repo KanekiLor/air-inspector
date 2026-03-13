@@ -6,11 +6,10 @@ import time
 import signal
 import subprocess
 import threading
-import pprint
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 # ----------------- LOGGER SETUP -----------------
 logging.basicConfig(
@@ -199,7 +198,7 @@ def deauthenticate(bssid_ap: str, bssid_client: Optional[str], iface: str, count
     return rc, stdout, stderr
 
 
-def deauth_worker(client_mac: str, bssid_ap: str, iface: str, count: int, stop_event: threading.Event) -> Dict:
+def deauth_worker(client_mac: str, bssid_ap: str, iface: str, count: int, stop_event: threading.Event) -> Dict[str,int]:
 
     result = {
         "client": client_mac,
@@ -290,7 +289,7 @@ def get_connected_clients(csv_path: Path, bssid_ap: str) -> List[str]:
             if s.get('bssid') and s.get('station') and 
                s.get('bssid').lower() == bssid_ap.lower()
         ]
-        return [c for c in clients if c]  # Filtrează None
+        return [c for c in clients if c]  
     except Exception as e:
         logger.error(f"Failed to parse clients: {e}")
         return []
