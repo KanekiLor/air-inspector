@@ -47,12 +47,18 @@ def check_requirements():
         'ip',
         'iw',
         'iwconfig',
+        'ifconfig',
+        'nmcli',
+        'iptables',
         'airodump-ng',
         'aircrack-ng',
+        'aireplay-ng',
         'airmon-ng',
+        'hostapd',
         'hostapd-mana',
         'dnsmasq',
         'hydra',
+        'hashcat',
         'hping3',
         'ettercap',
         'nmap',
@@ -60,7 +66,12 @@ def check_requirements():
         'rfkill',
         'systemctl',
         'tcpdump',
+        'tshark',
         'service',
+        'xterm',
+        'php',
+        'bettercap',
+        'scapy'
     ]
 
     missing_tools = []
