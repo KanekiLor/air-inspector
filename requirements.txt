@@ -1,0 +1,5 @@
+colorama>=0.4.6
+netifaces>=0.11.0
+pandas>=2.0.0
+pyshark>=0.6
+scapy>=2.5.0
