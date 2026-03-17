@@ -172,7 +172,7 @@ def main():
         elif choice == "7":
             # DragonShift Attack (WPA2-3 Transition)
             os.system("clear")
-            script_path = os.path.join(base_dir, "Wpa3_DragonBLood", "dragonshift.py")
+            script_path = os.path.join(base_dir, "Wpa3_DragonBLood", "main.py")
             subprocess.run(["python3", script_path])
         elif choice == "8":
             # WPA3 DoS Attack - using sae commit flood
