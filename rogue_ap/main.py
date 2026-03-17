@@ -278,9 +278,6 @@ hw_mode=g
 channel={channel}
 macaddr_acl=0
 ignore_broadcast_ssid=0
-
-bssid=wlan0_1
-ssid={ssid}_5GhZ
 """
 
 
