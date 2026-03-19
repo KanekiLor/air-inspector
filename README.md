@@ -67,13 +67,13 @@ AirInspector is not a monolithic implementation of all attacks. It acts as a con
         |              |              |             |          |         |
         v              v              v             v          v         v
 +---------------+ +-------------+ +-----------+ +----------+ +--------+ +------------------+
-|  wpa2_crack   | | DoS_Hping3  | | Nmap_scan | | rogue_ap | | Sweep  | |   Scapy_Scan     |
+|  wpa2_crack   | | Wpa2   DoS  | |Mitm Attack| | Evil Twin| | Sweep  | |   Triangulation  |
 +-------+-------+ +------+------+ +-----+-----+ +-----+----+ +----+---+ +---------+--------+
         |                |              |              |           |               |
         v                v              v              v           v               v
  aircrack-ng       hping3 / Scapy   nmap /         hostapd /    nmap /         Scapy
  airodump-ng       aireplay-ng      bettercap      dnsmasq /    nmcli          sniffing
- aireplay-ng                        ettercap       iptables                     RSSI analysis
+ aireplay-ng                                       iptables                     RSSI analysis
 
                                      |
                                      |
