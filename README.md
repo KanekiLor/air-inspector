@@ -52,25 +52,6 @@ A USB adapter based on chipsets such as Atheros AR9271 is a practical choice for
 
 Some features, such as DragonShift, require more than one wireless interface because one interface is used for rogue AP hosting and another for monitor mode and deauthentication.
 
-## Project Structure
-
-The repository is organized into modules that are launched by main.py:
-
-text
-air-inspector/
-├── main.py
-├── requirements.txt
-├── wpa2_crack/
-├── DoS_Hping3/
-├── Nmap_scan/
-├── rogue_ap/
-├── Sweep/
-├── Scapy_Scan/
-├── Wpa3_DOS/
-├── Wpa3_DragonBLood/
-├── ARP Spoofing/
-└── LICENSE
-
 
 ## Architecture
 
